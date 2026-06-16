@@ -6,7 +6,7 @@
   <title>Assistente da Tauba – Bolão MSNF 2026</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/recharts@2.5.0/umd/Recharts.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,8 +18,16 @@
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useMemo } = React;
-    const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-            ResponsiveContainer, ReferenceLine } = Recharts;
+    // Recharts — com fallback seguro caso o CDN falhe
+    const _RC = (typeof Recharts !== 'undefined') ? Recharts : {};
+    const LineChart = _RC.LineChart || function(){ return null; };
+    const Line = _RC.Line || function(){ return null; };
+    const XAxis = _RC.XAxis || function(){ return null; };
+    const YAxis = _RC.YAxis || function(){ return null; };
+    const CartesianGrid = _RC.CartesianGrid || function(){ return null; };
+    const Tooltip = _RC.Tooltip || function(){ return null; };
+    const ResponsiveContainer = _RC.ResponsiveContainer || function(p){ return p.children; };
+    const ReferenceLine = _RC.ReferenceLine || function(){ return null; };
 
 
 // ─────────────────────────────────────────────────────────────────────────────
