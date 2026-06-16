@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Assistente da Tauba – Bolão MSNF 2026</title>
+  <!-- React + Babel via CDN -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/recharts@2.5.0/umd/Recharts.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,16 +18,6 @@
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useMemo } = React;
-    // Recharts — com fallback seguro caso o CDN falhe
-    const _RC = (typeof Recharts !== 'undefined') ? Recharts : {};
-    const LineChart = _RC.LineChart || function(){ return null; };
-    const Line = _RC.Line || function(){ return null; };
-    const XAxis = _RC.XAxis || function(){ return null; };
-    const YAxis = _RC.YAxis || function(){ return null; };
-    const CartesianGrid = _RC.CartesianGrid || function(){ return null; };
-    const Tooltip = _RC.Tooltip || function(){ return null; };
-    const ResponsiveContainer = _RC.ResponsiveContainer || function(p){ return p.children; };
-    const ReferenceLine = _RC.ReferenceLine || function(){ return null; };
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,7 +27,6 @@
 //   1. Buscar dados diretamente do site da FIFA (bloqueio CORS + sem back-end)
 //   2. Executar rotina automática diária sem o app aberto
 // Solução viável implementada:
-//   - Botão "🔄 Buscar Resultados (via Claude AI)" que usa a Anthropic API
 //     para solicitar os resultados mais recentes e preenche automaticamente
 //   - Todos os dados são persistidos na sessão (sessionStorage)
 //   - Para atualização às 06h BRT com garantia, é necessário hospedar em
@@ -748,36 +737,17 @@ const DEFAULT_STATE={
 // Aplicado automaticamente se sessionStorage estiver vazio
 const SEED_RESULTS = {
   resultados: {
-    "1": [2,0],  // México 2×0 África do Sul (11/6 16h)
-    "2": [2,1],  // Coreia do Sul 2×1 Tchéquia (11/6 23h)
-    "3": [1,1],  // Canadá 1×1 Bósnia (12/6 16h)
-    "4": [4,1],  // EUA 4×1 Paraguai (12/6 22h)
-    "5": [0,1],  // Haiti 0×1 Escócia (13/6 22h)
-    "6": [2,0],  // Austrália 2×0 Turquia (14/6 01h)
-    "7": [1,1],  // Brasil 1×1 Marrocos (13/6 19h)
-    "8": [1,1],  // Catar 1×1 Suíça (13/6 16h)
-    "9": [1,0],  // Costa do Marfim 1×0 Equador (14/6 20h)
-    "10": [7,1],  // Alemanha 7×1 Curaçao (14/6 14h)
-    "11": [2,2],  // Holanda 2×2 Japão (14/6 17h)
-    "12": [5,1],  // Suécia 5×1 Tunísia (14/6 23h)
-    "13": [1,1],  // Arábia Saudita 1×1 Uruguai (15/6 19h)
-    "14": [0,0],  // Espanha 0×0 Cabo Verde (15/6 13h)
-    "15": [2,2],  // Irã 2×2 Nova Zelândia (15/6 22h)
-    "16": [1,1],  // Bélgica 1×1 Egito (15/6 16h)
+    "1": [2,0],  "2": [2,1],  "3": [1,1],  "4": [4,1],
+    "5": [0,1],  "6": [2,0],  "7": [1,1],  "8": [1,1],
+    "9": [1,0],  "10": [7,1], "11": [2,2], "12": [5,1],
+    "13": [1,1], "14": [0,0], "15": [2,2], "16": [1,1],
   },
   bingo: {
-    "f09": true,  // ✅ 2 cartões vermelhos em um mesmo jogo
-    "m15": true,  // ✅ 3 cartões vermelhos em um mesmo jogo
-    "f19": true,  // ✅ Jogo tem cinco ou mais cartões amarelos
-    "m21": true,  // ✅ Galvão Bueno fala 'olha o gol' 4+ vezes em narração do Brasil
-    "m01": true,  // ✅ Curaçao marca ao menos um gol
-    "d01": true,  // ✅ Alemanha soma 7 ou mais gols
-    "d02": true,  // ✅ Uma seleção marca 7+ gols em um mesmo jogo
+    "f09": true, "m15": true, "f19": true, "m21": true,
+    "m01": true, "d01": true, "d02": true,
   },
   golosCarnica: {
-    "catar": 1,
-    "curacao": 1,
-    "nova zelandia": 2,
+    "catar": 1, "curacao": 1, "nova zelandia": 2,
   },
 };
 function loadState(){
@@ -819,325 +789,6 @@ const CAT_BG={F:"rgba(56,189,248,.08)",M:"rgba(251,191,36,.08)",D:"rgba(248,113,
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN APP
 // ─────────────────────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────────────────────
-// GRÁFICO DE DESEMPENHO
-// ─────────────────────────────────────────────────────────────────────────────
-const CHART_COLORS = [
-  "#f59e0b","#3b82f6","#10b981","#ef4444","#8b5cf6",
-  "#06b6d4","#f97316","#84cc16","#ec4899","#6366f1",
-  "#14b8a6","#fbbf24","#60a5fa","#a78bfa","#fb7185",
-  "#c084fc","#34d399",
-];
-
-function GraficoTab({state}){
-  const [modo,setModo]=useState("acumulado"); // "acumulado" | "diario"
-  const [destaque,setDestaque]=useState(null);
-  const [filtro,setFiltro]=useState("todos");
-
-  // Calcula pontos por data a partir dos resultados em state
-  const pontosNoDia=useMemo(()=>{
-    const map={}; // nome -> { "DD/MM": pts }
-    P_NAMES.forEach(function(n){ map[n]={}; });
-
-    const add=function(n,d,v){
-      if(!map[n][d]) map[n][d]=0;
-      map[n][d]+=v;
-    };
-
-    const jogoPorId={};
-    JOGOS.forEach(function(m){ jogoPorId[String(m[0])]=m; });
-
-    const dataDe=function(mid){
-      const jogo=jogoPorId[String(mid)];
-      if(!jogo) return null;
-      const partes=(jogo[1]||"").split(" ")[0].split("/");
-      return (partes[0].length===1?"0"+partes[0]:partes[0])+"/"+(partes[1].length===1?"0"+partes[1]:partes[1]);
-    };
-
-    // Mapa de sacaneados: { nome -> Set(mid) }
-    const sacGames={};
-    P_NAMES.forEach(function(n){ sacGames[n]=new Set(); });
-    DELCIMAR_REVERSO.forEach(function(row){ sacGames[row[1]].add(String(row[2])); });
-
-    // Função para calcular pts de um participante num jogo (com Par de Bolas)
-    const ptsJogo=function(n,mid,res){
-      const pidx=P_NAMES.indexOf(n);
-      const pal=(MATCH_PALPITES[mid]||[])[pidx];
-      const pdbEntry=PAR_DE_BOLAS_PALPITES[mid];
-      const pdb=pdbEntry?pdbEntry[n]:null;
-      if(pdb){
-        const exact=function(p){return p&&p[0]===res[0]&&p[1]===res[1];};
-        return (exact(pal)||exact(pdb))?3:0;
-      }
-      const r=scoreMatch(pal,res);
-      return r===null?0:r;
-    };
-
-    // 1. Pontos de placar/coluna — PULANDO jogos em que o participante é sacaneado
-    Object.entries(state.resultados).forEach(function(entry){
-      const mid=entry[0]; const res=entry[1];
-      if(!res||!Array.isArray(res)) return;
-      const d=dataDe(mid); if(!d) return;
-      P_NAMES.forEach(function(n){
-        if(sacGames[n].has(String(mid))) return; // será tratado no Step 2
-        add(n, d, ptsJogo(n,mid,res));
-      });
-    });
-
-    // 2. Delcimar: sacaneado NÃO ganhou (pulado acima) E ainda perde os pts → negativo
-    //             delcimar GANHA os pts que o sacaneado perdeu
-    Object.entries(state.resultados).forEach(function(entry){
-      const mid=entry[0]; const res=entry[1];
-      if(!res||!Array.isArray(res)) return;
-      const d=dataDe(mid); if(!d) return;
-      DELCIMAR_REVERSO.forEach(function(row){
-        const delc=row[0]; const sac=row[1]; const jid=row[2];
-        if(String(jid)!==String(mid)) return;
-        const pts=ptsJogo(sac,mid,res);
-        if(pts>0){
-          add(sac,  d, -pts); // sacaneado fica negativo
-          add(delc, d,  pts); // delcimar ganha
-        }
-      });
-    });
-
-    // 3. Bingo por dia (datas mapeadas pelos eventos conhecidos)
-    const BINGO_DATAS={
-      "f09":"13/06","m15":"13/06","f19":"12/06","m21":"13/06","m22":"13/06","f02":"11/06",
-      "m01":"14/06","d01":"14/06","d02":"14/06",
-    };
-    Object.entries(state.bingo||{}).forEach(function(e){
-      const bid=e[0]; const on=e[1]; if(!on) return;
-      const evt=BINGO.find(function(b){return b.id===bid;}); if(!evt) return;
-      const d=BINGO_DATAS[bid]; if(!d) return;
-      P_NAMES.forEach(function(n){
-        if((BINGO_PICKS[n]||[]).includes(bid)) add(n,d,evt.pts);
-      });
-    });
-
-    // 4. Carniça: distribuída pelo dia do jogo em que o time marcou
-    // Mapeamos cada time carniça ao último dia em que jogou (com resultado)
-    const CARNICA_DIAS={
-      "catar":"13/06",        // Catar jogou j8 em 13/06
-      "curacao":"14/06",      // Curaçao jogou j10 em 14/06
-      "nova zelandia":"15/06",// Nova Zelândia jogou j15 em 15/06
-    };
-    P_NAMES.forEach(function(n){
-      const esp=ESPECIAIS[n]||{};
-      ["c1","c2"].forEach(function(k){
-        const time=(esp[k]||"").toLowerCase()
-          .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-          .replace(/\s+/g," ").trim();
-        const gols=(state.golosCarnica||{})[time]||0;
-        if(gols>0){
-          const d=CARNICA_DIAS[time];
-          if(d) add(n,d,gols);
-        }
-      });
-    });
-
-    // 5. Ajuste fino: qualquer delta restante (novos bingos sem data, etc.) vai ao último dia
-    P_NAMES.forEach(function(n){
-      const totalCalc=Object.values(map[n]).reduce(function(a,b){return a+b;},0);
-      const totalReal=calcScore(n,state).total;
-      const delta=totalReal-totalCalc;
-      if(delta!==0){
-        const diasN=Object.keys(map[n]).sort(function(a,b){
-          const pa=a.split("/"); const pb=b.split("/");
-          return (Number(pa[1])*100+Number(pa[0]))-(Number(pb[1])*100+Number(pb[0]));
-        });
-        const ultimoDia=diasN[diasN.length-1]||"15/06";
-        map[n][ultimoDia]=(map[n][ultimoDia]||0)+delta;
-      }
-    });
-
-    return map;
-  },[state]);
-
-  // Monta lista de dias ordenados
-  const dias=useMemo(()=>{
-    const set=new Set();
-    P_NAMES.forEach(function(n){ Object.keys(pontosNoDia[n]).forEach(function(d){set.add(d);}); });
-    return Array.from(set).sort(function(a,b){
-      const [da,ma]=a.split("/"); const [db,mb]=b.split("/");
-      return (Number(ma)*100+Number(da))-(Number(mb)*100+Number(db));
-    });
-  },[pontosNoDia]);
-
-  // Monta dados do gráfico
-  const chartData=useMemo(()=>{
-    const inicio={dia:"Início"};
-    P_NAMES.forEach(function(n){inicio[n]=0;});
-    const rows=[inicio];
-    let acc={};
-    P_NAMES.forEach(function(n){acc[n]=0;});
-    dias.forEach(function(d){
-      const row={dia:d};
-      P_NAMES.forEach(function(n){
-        const pts=pontosNoDia[n][d]||0;
-        if(modo==="acumulado"){
-          acc[n]+=pts;
-          row[n]=acc[n];
-        } else {
-          row[n]=pts;
-        }
-      });
-      rows.push(row);
-    });
-    return rows;
-  },[pontosNoDia,dias,modo]);
-
-  const grupos={
-    todos: P_NAMES,
-    lideres: ["Barros","Jonathan","Vinícius","Juliana","Lehl","Renan Duce"],
-    meio: ["Lucas","Rodolfo","Douglas","Mara","William","Nani","Serginho"],
-    bottom: ["Fernando","Renatinha","Renan P.","Priscila"],
-  };
-  const visiveis=grupos[filtro]||P_NAMES;
-
-  const CustomTooltip=function(props){
-    const active=props.active; const payload=props.payload; const label=props.label;
-    if(!active||!payload||!payload.length) return null;
-    const sorted=[...payload].sort(function(a,b){return b.value-a.value;});
-    return (
-      <div style={{background:"#0f1523",border:"1px solid rgba(255,255,255,.12)",borderRadius:"10px",padding:"10px 14px",minWidth:"170px",maxHeight:"260px",overflowY:"auto"}}>
-        <div style={{color:"#94a3b8",fontSize:"10px",fontWeight:700,marginBottom:"6px",textTransform:"uppercase"}}>{label}</div>
-        {sorted.map(function(entry,i){
-          return (
-            <div key={i} style={{display:"flex",justifyContent:"space-between",gap:"12px",fontSize:"11px",marginBottom:"2px"}}>
-              <span style={{color:entry.color,fontWeight:600}}>{entry.name}</span>
-              <span style={{color:"#e2e8f0",fontWeight:800}}>{entry.value>0?"+":""}{entry.value}pts</span>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:"12px"}}>
-
-      {/* Toggle modo */}
-      <div style={{display:"flex",background:"rgba(255,255,255,.04)",borderRadius:"12px",padding:"3px",gap:"3px"}}>
-        {[{id:"acumulado",l:"📈 Acumulado"},{id:"diario",l:"📊 Por dia"}].map(function(m){
-          return (
-            <button key={m.id} onClick={()=>setModo(m.id)} style={{flex:1,padding:"7px",borderRadius:"9px",border:"none",cursor:"pointer",fontWeight:700,fontSize:"11px",
-              background:modo===m.id?"linear-gradient(135deg,#6366f1,#3b82f6)":"transparent",
-              color:modo===m.id?"#fff":C.muted}}>
-              {m.l}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filtro grupo */}
-      <div style={{display:"flex",gap:"5px",flexWrap:"wrap"}}>
-        {[{k:"todos",l:"Todos"},{k:"lideres",l:"🏆 Top 6"},{k:"meio",l:"🔄 Pelotão"},{k:"bottom",l:"🔦 Bottom"}].map(function(g){
-          return (
-            <button key={g.k} onClick={()=>setFiltro(g.k)} style={{padding:"4px 12px",borderRadius:"20px",border:"none",cursor:"pointer",fontWeight:700,fontSize:"10px",
-              background:filtro===g.k?"#4f46e5":"rgba(255,255,255,.05)",color:filtro===g.k?"#fff":C.muted}}>
-              {g.l}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Legenda clicável */}
-      <div style={{display:"flex",flexWrap:"wrap",gap:"5px"}}>
-        {P_NAMES.map(function(p,i){
-          const isAtivo=visiveis.includes(p);
-          const isDestaqueAtivo=destaque===p;
-          return (
-            <button key={p} onClick={()=>setDestaque(destaque===p?null:p)}
-              style={{display:"flex",alignItems:"center",gap:"4px",padding:"3px 9px",borderRadius:"20px",cursor:"pointer",
-                border:isDestaqueAtivo?"1px solid "+CHART_COLORS[i]:"1px solid rgba(255,255,255,.07)",
-                background:isDestaqueAtivo?"rgba(255,255,255,.06)":"transparent",
-                opacity:isAtivo?1:0.25}}>
-              <span style={{width:"7px",height:"7px",borderRadius:"50%",background:CHART_COLORS[i],display:"inline-block",flexShrink:0}}/>
-              <span style={{fontSize:"10px",color:isDestaqueAtivo?CHART_COLORS[i]:C.muted,fontWeight:isDestaqueAtivo?700:400}}>{p}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Gráfico */}
-      <div style={{background:"rgba(13,17,23,.9)",borderRadius:"14px",padding:"16px 4px 10px",border:`1px solid ${C.border}`}}>
-        <ResponsiveContainer width="100%" height={340}>
-          <LineChart data={chartData} margin={{top:4,right:16,left:-16,bottom:4}}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.04)"/>
-            <XAxis dataKey="dia" tick={{fill:C.muted,fontSize:10,fontWeight:600}} axisLine={{stroke:"#1a2235"}} tickLine={false}/>
-            <YAxis tick={{fill:C.muted,fontSize:10}} axisLine={false} tickLine={false} tickFormatter={function(v){return v+"pt";}} domain={[function(min){return Math.min(min,-1);}, 'auto']}/>
-            <ReferenceLine y={0} stroke="rgba(255,255,255,.18)" strokeDasharray="4 4"/>
-            <Tooltip content={CustomTooltip}/>
-            {P_NAMES.map(function(p,i){
-              const isVis=visiveis.includes(p);
-              const isDest=destaque===p;
-              const opacity=destaque?(isDest?1:0.06):(isVis?1:0.1);
-              return (
-                <Line key={p} type="monotone" dataKey={p}
-                  stroke={CHART_COLORS[i]}
-                  strokeWidth={isDest?3:1.5}
-                  dot={{r:isDest?5:2,fill:CHART_COLORS[i],strokeWidth:0}}
-                  activeDot={{r:6,strokeWidth:0}}
-                  opacity={opacity}/>
-              );
-            })}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Tabela de pontuação por dia (modo diário) */}
-      {modo==="diario"&&(
-        <div style={{background:"rgba(13,17,23,.9)",borderRadius:"14px",border:`1px solid ${C.border}`,overflow:"hidden"}}>
-          <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:"11px",minWidth: dias.length>5? dias.length*80+"px":"100%"}}>
-              <thead>
-                <tr style={{borderBottom:`1px solid ${C.border}`}}>
-                  <th style={{padding:"8px 10px",textAlign:"left",color:C.muted,fontWeight:700,fontSize:"10px",textTransform:"uppercase",position:"sticky",left:0,background:"#0d1117",zIndex:2}}>Participante</th>
-                  {dias.map(function(d){
-                    return <th key={d} style={{padding:"8px 8px",textAlign:"center",color:C.accent,fontWeight:700,fontSize:"10px",whiteSpace:"nowrap"}}>{d}</th>;
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {(()=>{
-                  // Ordenar por total DESC para o dia mais recente
-                  const ultimoDia=dias[dias.length-1];
-                  const sorted=[...P_NAMES].sort(function(a,b){
-                    return (pontosNoDia[b][ultimoDia]||0)-(pontosNoDia[a][ultimoDia]||0);
-                  });
-                  return sorted.map(function(p,i){
-                    const pidx=P_NAMES.indexOf(p);
-                    return (
-                      <tr key={p} style={{borderBottom:`1px solid rgba(255,255,255,.04)`,background:i%2===0?"transparent":"rgba(255,255,255,.02)"}}>
-                        <td style={{padding:"7px 10px",position:"sticky",left:0,background:i%2===0?"#0d1117":"#0f1320",zIndex:1}}>
-                          <span style={{display:"inline-block",width:"8px",height:"8px",borderRadius:"50%",background:CHART_COLORS[pidx],marginRight:"6px",verticalAlign:"middle"}}/>
-                          <span style={{color:C.text,fontWeight:600}}>{p}</span>
-                        </td>
-                        {dias.map(function(d){
-                          const v=pontosNoDia[p][d]||0;
-                          const color=v>0?"#4ade80":v<0?"#f87171":C.muted;
-                          const label=v===0?"—":(v>0?"+"+v:v);
-                          return <td key={d} style={{padding:"7px 8px",textAlign:"center",color:color,fontWeight:v!==0?700:400}}>{label}</td>;
-                        })}
-                      </tr>
-                    );
-                  });
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      <div style={{fontSize:"9px",color:"#2a3450",textAlign:"center"}}>
-        {modo==="acumulado"?"Pontuação acumulada ao longo dos dias":"Pontos conquistados em cada dia"}
-        {" · "}Clique em um nome para destacar · {dias.length} dias jogados
-      </div>
-    </div>
-  );
-}
-
 function App(){
   const [state,setState]=useState(loadState);
   const [tab,setTab]=useState("ranking");
@@ -1154,20 +805,7 @@ function App(){
 
   const ranked=useMemo(()=>{
     const arr=P_NAMES.map(n=>({name:n,esp:ESPECIAIS[n]||{},score:calcScore(n,state)}))
-      .sort((a,b)=>{
-        // a) Total DESC
-        if(b.score.total!==a.score.total) return b.score.total-a.score.total;
-        // b) Placares exatos (cnt) DESC
-        if(b.score.matchCount!==a.score.matchCount) return b.score.matchCount-a.score.matchCount;
-        // c) Extras DESC = classificados + carniça + finalistas + campeão + artilheiro (SEM bingo, SEM delcimar)
-        const extA=a.score.classif+a.score.carnica+a.score.finalistas+a.score.campeao+a.score.artilheiro;
-        const extB=b.score.classif+b.score.carnica+b.score.finalistas+b.score.campeao+b.score.artilheiro;
-        if(extB!==extA) return extB-extA;
-        // d) Bingo (pts) DESC
-        if(b.score.bingo!==a.score.bingo) return b.score.bingo-a.score.bingo;
-        // e) Sorteio → Nome ASC (determinístico)
-        return a.name.localeCompare(b.name);
-      });
+      .sort((a,b)=>b.score.total-a.score.total || b.score.matchCount-a.score.matchCount || a.name.localeCompare(b.name));
     return arr.map((x,i)=>({...x,rank:i+1,isLast:i===arr.length-1}));
   },[state]);
 
@@ -1218,7 +856,7 @@ function App(){
       {/* ─── TABS ──────────────────────────────────────────── */}
       <div style={{position:"sticky",top:0,zIndex:20,background:"rgba(7,9,15,.95)",backdropFilter:"blur(10px)",borderBottom:`1px solid ${C.border}`}}>
         <div style={{display:"flex",gap:"4px",maxWidth:"560px",margin:"0 auto",padding:"7px 12px"}}>
-          {[{id:"ranking",i:"🏆",l:"Ranking"},{id:"jogos",i:"⚽",l:"Jogos"},{id:"bingo",i:"🎯",l:"Bingo"},{id:"grafico",i:"📈",l:"Gráfico"},{id:"admin",i:"⚙️",l:"Admin"}].map(t=>(
+          {[{id:"ranking",i:"🏆",l:"Ranking"},{id:"jogos",i:"⚽",l:"Jogos"},{id:"bingo",i:"🎯",l:"Bingo"},{id:"admin",i:"⚙️",l:"Admin"}].map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,padding:"7px 2px",borderRadius:"9px",border:"none",cursor:"pointer",fontWeight:700,fontSize:"11px",transition:"all .15s",
               background:tab===t.id?"linear-gradient(135deg,#6366f1,#3b82f6)":"rgba(255,255,255,.03)",
               color:tab===t.id?"#fff":C.muted,boxShadow:tab===t.id?"0 1px 8px rgba(99,102,241,.35)":"none"}}>
@@ -1279,29 +917,23 @@ function App(){
                   {isExp&&(
                     <div style={{borderTop:`1px solid ${C.border}`,padding:"12px",background:"rgba(0,0,0,.3)"}}>
                       {/* breakdown */}
-                      {(()=>{
-                        const extras=score.bingo+score.delcimarPts+score.carnica+score.classif+score.artilheiro+score.finalistas+score.campeao;
-                        const colPts=score.match-score.matchCount*3;
-                        const pills=[
-                          {l:"Placares",v:score.matchCount,suf:"×3",c:"#38bdf8"},
-                          {l:"Extras",v:extras,suf:"pts",c:extras<0?"#f87171":"#facc15"},
-                          {l:"Colunas",v:colPts,suf:"pts",c:"#818cf8"},
-                          {l:"Bingo",v:score.bingo,suf:"pts",c:"#4ade80"},
-                          {l:"Delcimar",v:score.delcimarPts,suf:"pts",c:score.delcimarPts<0?"#f87171":"#4ade80"},
-                          {l:"Carniça",v:score.carnica,suf:"pts",c:"#fb923c"},
-                        ];
-                        return(
-                          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"5px",marginBottom:"10px"}}>
-                            {pills.map(x=>(
-                              <div key={x.l} style={{background:"rgba(255,255,255,.03)",border:`1px solid ${C.border}`,borderRadius:"8px",padding:"7px 4px",textAlign:"center"}}>
-                                <div style={{fontWeight:900,fontSize:"18px",color:x.c,lineHeight:1}}>{x.v}</div>
-                                <div style={{fontSize:"8px",color:C.muted,marginTop:"1px"}}>{x.suf}</div>
-                                <div style={{fontSize:"9px",color:C.muted,marginTop:"2px"}}>{x.l}</div>
-                              </div>
-                            ))}
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"5px",marginBottom:"10px"}}>
+                        {[
+                          {l:"Placares",v:score.matchCount,c:"#38bdf8"},
+                          {l:"Classif.",v:score.classif,c:"#a78bfa"},
+                          {l:"Bingo",v:score.bingo,c:"#4ade80"},
+                          {l:"Carniça",v:score.carnica,c:"#fb923c"},
+                          {l:"Delcimar",v:score.delcimarPts,c:score.delcimarPts<0?"#f87171":"#4ade80"},
+                          {l:"Artilh.",v:score.artilheiro,c:"#a78bfa"},
+                          {l:"Finalistas",v:score.finalistas,c:"#60a5fa"},
+                          {l:"Campeão",v:score.campeao,c:"#fbbf24"},
+                        ].map(x=>(
+                          <div key={x.l} style={{background:"rgba(255,255,255,.03)",border:`1px solid ${C.border}`,borderRadius:"8px",padding:"6px 4px",textAlign:"center"}}>
+                            <div style={{fontWeight:900,fontSize:"16px",color:x.c}}>{x.v}</div>
+                            <div style={{fontSize:"9px",color:C.muted}}>{x.l}</div>
                           </div>
-                        );
-                      })()}
+                        ))}
+                      </div>
                       {/* acertos */}
                       {score.details.length>0&&(
                         <div style={{marginBottom:"10px"}}>
@@ -1394,7 +1026,6 @@ function App(){
         )}
 
         {/* ════ ADMIN ════ */}
-        {tab==="grafico"&&<GraficoTab state={state}/>}
         {tab==="admin"&&<AdminTab state={state} onUpdate={update} adminSec={adminSec} setAdminSec={setAdminSec}/>}
 
       </div>
@@ -1425,89 +1056,29 @@ function JogosTab({state,onUpdate}){
 
   const jogosGrp=JOGOS.filter(m=>m[4]===grp);
 
-  const [seedCopied,setSeedCopied]=useState(false);
-  const [showSeed,setShowSeed]=useState(false);
-
-  const gerarSeed=()=>{
+  const copyResultados=()=>{
     const res=state.resultados||{};
-    const bng=state.bingo||{};
-    const golos=state.golosCarnica||{};
-    const resEntries=Object.entries(res)
+    const lines=Object.entries(res)
       .filter(function(e){return e[1]&&Array.isArray(e[1]);})
       .sort(function(a,b){
         const na=a[0]==="29C"?29.5:Number(a[0]);
         const nb=b[0]==="29C"?29.5:Number(b[0]);
         return na-nb;
-      });
-    const resLines=resEntries.map(function(e){
-      const mid=e[0]; const v=e[1];
-      const jogo=JOGOS.find(function(m){return String(m[0])===String(mid);});
-      const home=jogo?jogo[2]:"?"; const away=jogo?jogo[3]:"?"; const data=jogo?jogo[1]:"";
-      return '    "'+mid+'": ['+v[0]+','+v[1]+'],  // '+home+' '+v[0]+'×'+v[1]+' '+away+' ('+data+')';
-    });
-    const bingoLines=Object.entries(bng)
-      .filter(function(e){return e[1];})
+      })
       .map(function(e){
-        const bid=e[0];
-        const evt=BINGO.find(function(b){return b.id===bid;});
-        return '    "'+bid+'": true,  // ✅ '+(evt?evt.text:bid);
+        const mid=e[0]; const v=e[1];
+        const jogo=JOGOS.find(function(m){return String(m[0])===String(mid);});
+        const label=jogo?jogo[3]+" "+v[0]+"x"+v[1]+" "+jogo[7]:"#"+mid+": "+v[0]+"x"+v[1];
+        return "#"+mid+" - "+label;
       });
-    const golosLines=Object.entries(golos)
-      .filter(function(e){return (e[1]||0)>0;})
-      .map(function(e){return '    "'+e[0]+'": '+e[1]+',';});
-    return [
-      'const SEED_RESULTS = {',
-      '  resultados: {',
-      resLines.join('\n'),
-      '  },',
-      '  bingo: {',
-      bingoLines.join('\n'),
-      '  },',
-      '  golosCarnica: {',
-      golosLines.join('\n'),
-      '  },',
-      '};'
-    ].join('\n');
-  };
-
-  const copiarSeed=()=>{
-    const seed=gerarSeed();
-    const fallback=()=>{
-      // Fallback: seleciona o textarea e executa document.execCommand
-      const ta=document.getElementById("seed-textarea");
-      if(ta){
-        ta.select();
-        try{
-          document.execCommand("copy");
-          setSeedCopied(true);
-          setTimeout(function(){setSeedCopied(false);},3000);
-        }catch(e){
-          // último recurso: abre alert com o conteúdo
-          alert("Copie manualmente o conteúdo da caixa de texto acima.");
-        }
-      }
-    };
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(seed).then(function(){
-        setSeedCopied(true);
-        setTimeout(function(){setSeedCopied(false);},3000);
-      }).catch(function(){
-        fallback();
-      });
-    } else {
-      fallback();
-    }
-  };
-
-  const exportScores=()=>{
-    const scores={};
-    P_NAMES.forEach(function(n){ scores[n]=calcScore(n,state).total; });
-    const out=JSON.stringify({scores:scores},null,2);
+    const out="RESULTADOS ("+lines.length+" jogos):\n"+lines.join("\n");
     try{
       navigator.clipboard.writeText(out).then(function(){
-        alert("Pontuações copiadas!\nCole no artefato da 2ª fase para importar.");
+        alert("Resultados copiados! Cole no chat para salvar no seed.");
       });
-    }catch(err){ alert(out); }
+    }catch(err){
+      alert(out);
+    }
   };
 
   return(
@@ -1527,25 +1098,8 @@ function JogosTab({state,onUpdate}){
           );
         })}
       </div>
-      <div style={{marginBottom:"10px",display:"flex",flexDirection:"column",gap:"6px"}}>
-        <button onClick={()=>setShowSeed(function(v){return !v;})} style={{background:"linear-gradient(135deg,#6366f1,#3b82f6)",color:"#fff",border:"none",borderRadius:"9px",padding:"8px 16px",fontWeight:700,fontSize:"12px",cursor:"pointer",width:"100%"}}>
-          {showSeed?"▲ Fechar":"📋 Gerar SEED_RESULTS para atualizar o arquivo"}
-        </button>
-        {showSeed&&(
-          <div style={{background:"rgba(10,12,24,0.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:"10px",padding:"10px",display:"flex",flexDirection:"column",gap:"8px"}}>
-            <div style={{fontSize:"10px",color:"#818cf8",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>
-              Bloco SEED_RESULTS atualizado · {Object.keys(state.resultados||{}).length} resultados · {Object.values(state.bingo||{}).filter(Boolean).length} bingos
-            </div>
-            <textarea id="seed-textarea" readOnly value={gerarSeed()} style={{width:"100%",minHeight:"160px",background:"#050810",border:"1px solid rgba(255,255,255,.07)",borderRadius:"8px",color:"#7dd3fc",fontSize:"10px",fontFamily:"monospace",padding:"8px",resize:"vertical",boxSizing:"border-box",lineHeight:1.5}}/>
-            <button onClick={copiarSeed} style={{background:seedCopied?"linear-gradient(135deg,#16a34a,#15803d)":"linear-gradient(135deg,#4f46e5,#2563eb)",color:"#fff",border:"none",borderRadius:"8px",padding:"8px",fontWeight:800,fontSize:"12px",cursor:"pointer",transition:"background .3s"}}>
-              {seedCopied?"✅ Copiado! Cole no JSX substituindo o SEED_RESULTS antigo":"📄 Copiar para Clipboard"}
-            </button>
-            <div style={{fontSize:"9px",color:"#4b5775",lineHeight:1.5}}>
-              Substitua o bloco <code style={{color:"#a78bfa"}}>const SEED_RESULTS = {"{ ... }"}</code> no arquivo JSX pelo conteúdo acima e salve. Todos os resultados, bingos e gols de carniça ficam permanentes.
-            </div>
-          </div>
-        )}
-        <button onClick={exportScores} style={{background:"linear-gradient(135deg,#059669,#10b981)",color:"#fff",border:"none",borderRadius:"9px",padding:"8px 16px",fontWeight:700,fontSize:"12px",cursor:"pointer",width:"100%"}}>📤 Exportar Pontuações para a 2ª Fase</button>
+      <div style={{marginBottom:"10px"}}>
+        <button onClick={copyResultados} style={{background:"linear-gradient(135deg,#6366f1,#3b82f6)",color:"#fff",border:"none",borderRadius:"9px",padding:"8px 16px",fontWeight:700,fontSize:"12px",cursor:"pointer",width:"100%"}}>📋 Copiar Resultados para Salvar no Seed</button>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
         {jogosGrp.map(m=>{
